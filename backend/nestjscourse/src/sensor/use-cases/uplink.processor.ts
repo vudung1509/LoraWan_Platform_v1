@@ -43,45 +43,34 @@ export class UplinkProcessor extends WorkerHost {
     const devEui = chirpstackData.deviceInfo?.devEui;
     const timer = this.processingDuration.startTimer();
     
-    
-    // Test-Hook: Dung Redis de xac dinh cac DevEUI can gia lap loi (phuc vu E2E Testing)
+    // Test-Hook: Fail DevEUI for testing
     const redis = this.redisService.getClient();
     const failureTrigger = await redis.get('test_hook:fail_deveui');
-    
     if (failureTrigger && devEui === failureTrigger) {
-      throw new Error(`Simulated failure for E2E Testing with DevEUI: ${devEui}`);
+      throw new Error(`Simulated failure: ${devEui}`);
     }
 
-    if (!devEui) {
-      this.logger.error('No devEui found in uplink data');
-      return;
-    }
+    if (!devEui) return;
     const fCnt = chirpstackData.fCnt;
 
     try {
-      // 1. Kiem tra Idempotency va xu ly reboot
+      // 1. Idempotency & Reboot check
       if (fCnt !== undefined) {
         const redisKey = `uplink:idempotency:${devEui}`;
         const lastFCntStr = await this.redisService.getClient().get(redisKey);
         
         if (lastFCntStr !== null) {
           const lastFCnt = parseInt(lastFCntStr);
-          
           if (lastFCnt >= fCnt) {
-            // Neu fCnt reset (nho hon nhieu so voi gia tri truoc), coi nhu thiet bi reboot
             const isReboot = fCnt < (lastFCnt - 100); 
-            if (!isReboot) {
-              this.logger.debug(`Skipping duplicate uplink for ${devEui} | fCnt: ${fCnt} | last: ${lastFCnt}`);
-              return;
-            }
-            this.logger.log(`Device reboot detected for ${devEui} (fCnt reset ${lastFCnt} -> ${fCnt}). Accepting.`);
+            if (!isReboot) return;
+            this.logger.log(`Reboot ${devEui}: ${lastFCnt} -> ${fCnt}`);
           }
         }
-        // Luu fCnt moi vao Redis voi TTL 10 phut
         await this.redisService.getClient().set(redisKey, fCnt.toString(), 'EX', 600);
       }
 
-      // 2. Decode va luu tru du lieu
+      // 2. Decode & Save
       const payload = this.decoderRegistry.decode(chirpstackData);
       const reading = new SensorReading({
         devEui,
@@ -99,21 +88,22 @@ export class UplinkProcessor extends WorkerHost {
         await this.triggerAlert.execute(reading);
       }
 
+      // Emit event for status sync
       this.eventEmitter.emit('device.seen', { devEui });
 
-      this.logger.log(`Worker processed ${devEui} [fCnt=${fCnt}]`);
+      this.logger.log(`Processed ${devEui} [fCnt=${fCnt}]`);
       this.processedCounter.labels('success').inc();
       timer();
     } catch (error) {
       this.processedCounter.labels('error').inc();
       timer();
-      this.logger.error(`Error in UplinkProcessor for ${devEui}`, error.stack);
+      this.logger.error(`Error ${devEui}`, error.stack);
       throw error; 
     }
   }
 
   @OnWorkerEvent('failed')
   onFailed(job: Job, error: Error) {
-    this.logger.error(`Job ${job.id} failed with error: ${error.message}. Payload: ${JSON.stringify(job.data)}`);
+    this.logger.error(`Job ${job.id} failed: ${error.message}`);
   }
 }

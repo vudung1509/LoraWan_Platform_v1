@@ -16,10 +16,10 @@ import { DeviceListener } from './use-cases/device.listener';
   ],
   controllers: [DeviceController],
   providers: [
-    { provide: IDownlinkPort, useExisting: MqttService },
-    SendCommandUseCase,
     DeviceService,
     DeviceListener,
+    SendCommandUseCase,
+    { provide: IDownlinkPort, useExisting: MqttService },
   ],
   exports: [DeviceService],
 })

@@ -8,6 +8,7 @@ export class SendCommandUseCase {
 
   constructor(private readonly downlink: IDownlinkPort) {}
 
+  // Dispatch command to MQTT
   async execute(command: DeviceCommand): Promise<{ status: string; command: string }> {
     this.downlink.send({
       applicationId: command.applicationId,
@@ -17,7 +18,7 @@ export class SendCommandUseCase {
       data: command.toBase64(),
     });
 
-    this.logger.log(`Command [${command.commandType}] dispatched to ${command.devEui}`);
+    this.logger.log(`Dispatched: ${command.commandType} -> ${command.devEui}`);
     return { status: 'dispatched', command: command.commandType };
   }
 }
