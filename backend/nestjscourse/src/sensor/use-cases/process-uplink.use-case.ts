@@ -9,6 +9,8 @@ export class ProcessUplinkUseCase {
   constructor(
     @InjectQueue('uplink') 
     private readonly uplinkQueue: Queue,
+    @InjectQueue('uplink-priority')
+    private readonly priorityQueue: Queue,
   ) {}
 
   async execute(chirpstackData: any): Promise<void> {
@@ -20,21 +22,26 @@ export class ProcessUplinkUseCase {
       return;
     }
 
-    // Đẩy vào Queue để xử lý bất đồng bộ
+    // Phân luồng ưu tiên (Bulkhead): fPort = 1 thường là tin báo động/khẩn cấp
+    const fPort = chirpstackData.fPort;
+    const targetQueue = fPort === 1 ? this.priorityQueue : this.uplinkQueue;
+    
     try {
       const isTest = process.env.NODE_ENV === 'test';
-      await this.uplinkQueue.add('handleUplink', chirpstackData, {
-        jobId: `${devEui}-${chirpstackData.fCnt}`, // Queue-level idempotency
+      await targetQueue.add('handleUplink', chirpstackData, {
+        jobId: `${devEui}-${chirpstackData.fCnt}`, 
+        priority: fPort === 1 ? 1 : 10, // BullMQ priority (lower is higher)
         attempts: 3,
         backoff: {
           type: 'exponential',
-          delay: isTest ? 200 : 5000, // Fast backoff in test env
+          delay: isTest ? 200 : 5000,
         },
         removeOnComplete: true,
-        removeOnFail: false, // Giữ lại lỗi để debug (DLQ)
+        removeOnFail: false,
       });
       
-      this.logger.debug(`Queued uplink for ${devEui} [fCnt=${chirpstackData.fCnt}]`);
+      const qName = fPort === 1 ? 'PRIORITY' : 'STANDARD';
+      this.logger.debug(`Queued [${qName}] uplink for ${devEui} [fCnt=${chirpstackData.fCnt}]`);
     } catch (error) {
       this.logger.error(`Failed to queue uplink for ${devEui}`, error.stack);
     }

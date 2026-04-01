@@ -13,6 +13,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 
 import { HealthModule } from './health/health.module';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
@@ -36,6 +37,9 @@ import { HealthModule } from './health/health.module';
     SensorModule,
     AlertModule,
     HealthModule,
+    PrometheusModule.register({
+      path: '/metrics',
+    }),
   ],
   controllers: [],
   providers: [],

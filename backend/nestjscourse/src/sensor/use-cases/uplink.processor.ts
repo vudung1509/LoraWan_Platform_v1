@@ -11,6 +11,8 @@ import type { ITimeSeriesRepository } from '../domain/time-series.repository';
 import { decodeUplinkPayload } from '../domain/sensor-payload.decoder';
 import { TriggerAlertUseCase } from '../../alert/use-cases/trigger-alert.use-case';
 import { RedisService } from '../infrastructure/redis.service';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter, Histogram } from 'prom-client';
 
 @Processor('uplink')
 export class UplinkProcessor extends WorkerHost {
@@ -25,6 +27,10 @@ export class UplinkProcessor extends WorkerHost {
     private readonly timeSeriesRepo: ITimeSeriesRepository,
     private readonly triggerAlert: TriggerAlertUseCase,
     private readonly redisService: RedisService,
+    @InjectMetric('uplink_processed_total')
+    private readonly processedCounter: Counter<string>,
+    @InjectMetric('uplink_processing_duration_seconds')
+    private readonly processingDuration: Histogram<string>,
   ) {
     super();
   }
@@ -32,6 +38,8 @@ export class UplinkProcessor extends WorkerHost {
   async process(job: Job<any, any, string>): Promise<void> {
     const chirpstackData = job.data;
     const devEui = chirpstackData.deviceInfo?.devEui;
+    const timer = this.processingDuration.startTimer();
+    
     
     // Test-Hook: Dung Redis de xac dinh cac DevEUI can gia lap loi (phuc vu E2E Testing)
     const redis = this.redisService.getClient();
@@ -89,7 +97,11 @@ export class UplinkProcessor extends WorkerHost {
       }
 
       this.logger.log(`Worker processed ${devEui} [fCnt=${fCnt}]`);
+      this.processedCounter.labels('success').inc();
+      timer();
     } catch (error) {
+      this.processedCounter.labels('error').inc();
+      timer();
       this.logger.error(`Error in UplinkProcessor for ${devEui}`, error.stack);
       throw error; 
     }
