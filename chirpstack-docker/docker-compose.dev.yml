@@ -1,0 +1,68 @@
+# Docker Compose for Development
+# Use this for local testing without strict MQTT authentication
+
+services:
+  chirpstack:
+    image: chirpstack/chirpstack:4
+    command: -c /etc/chirpstack
+    restart: unless-stopped
+    volumes:
+      - ./configuration/chirpstack:/etc/chirpstack
+    depends_on:
+      - postgres
+      - mosquitto
+      - redis
+    environment:
+      - MQTT_BROKER_HOST=mosquitto
+      - REDIS_HOST=redis
+      - POSTGRESQL_HOST=postgres
+    ports:
+      - "8080:8080"
+
+  postgres:
+    image: postgres:14-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./configuration/postgresql/initdb:/docker-entrypoint-initdb.d
+      - postgresqldata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=chirpstack
+      - POSTGRES_PASSWORD=chirpstack
+      - POSTGRES_DB=chirpstack
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes: 
+      - ./configuration/mosquitto/config/mosquitto.dev.conf:/mosquitto/config/mosquitto.conf
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=lora_org
+      - DOCKER_INFLUXDB_INIT_BUCKET=sensor_readings
+    volumes:
+      - influxdbdata:/var/lib/influxdb2
+
+volumes:
+  postgresqldata:
+  redisdata:
+  influxdbdata:
