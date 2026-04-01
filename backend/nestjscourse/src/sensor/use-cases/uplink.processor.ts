@@ -14,7 +14,7 @@ import { RedisService } from '../infrastructure/redis.service';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
 
-@Processor('uplink')
+@Processor('uplink', { concurrency: 20 })
 export class UplinkProcessor extends WorkerHost {
   private readonly logger = new Logger(UplinkProcessor.name);
 

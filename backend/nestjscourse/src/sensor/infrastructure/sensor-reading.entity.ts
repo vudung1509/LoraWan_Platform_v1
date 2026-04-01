@@ -1,10 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('app_sensor_reading')
 export class SensorReadingEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index()
   @Column()
   devEui: string;
 
@@ -26,6 +27,7 @@ export class SensorReadingEntity {
   @Column({ type: 'jsonb', nullable: true })
   rawPayload: any;
 
+  @Index()
   @CreateDateColumn()
   recordedAt: Date;
 }
