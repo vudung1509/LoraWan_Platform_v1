@@ -1,21 +1,30 @@
-import { Controller, Post, Param, Body, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { SendCommandUseCase } from './use-cases/send-command.use-case';
-import { DeviceCommand } from './domain/device-command.model';
-import { DeviceCommandDto } from './dto/device-command.dto';
-import { DevEuiParamDto } from '../sensor/dto/sensor-query.dto';
+import { DeviceService } from './use-cases/device.service';
 
-@UseGuards(AuthGuard('jwt'))
 @Controller('devices')
 export class DeviceController {
-  constructor(private readonly sendCommand: SendCommandUseCase) {}
+  constructor(
+    private readonly sendCommand: SendCommandUseCase,
+    private readonly deviceService: DeviceService,
+  ) {}
 
-  @Post(':devEui/control')
-  async control(
-    @Param() params: DevEuiParamDto,
-    @Body() commandDto: DeviceCommandDto,
+  /**
+   * Xem danh mục thiết bị và trạng thái (Fleet Status)
+   */
+  @Get()
+  async findAll() {
+    return this.deviceService.getAllDevices();
+  }
+
+  /**
+   * Gửi lệnh xuống thiết bị (Downlink)
+   */
+  @Post(':devEui/command')
+  async send(
+    @Param('devEui') devEui: string,
+    @Body() command: any,
   ) {
-    const deviceCommand = new DeviceCommand(params.devEui, commandDto.command);
-    return this.sendCommand.execute(deviceCommand);
+    return this.sendCommand.execute(devEui, command);
   }
 }

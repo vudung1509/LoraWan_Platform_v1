@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../users/entities/user.entity';
 import { SensorReadingEntity } from '../sensor/infrastructure/sensor-reading.entity';
 import { AlertEntity } from '../alert/infrastructure/alert.entity';
+import { DeviceEntity } from '../device/entities/device.entity';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { AlertEntity } from '../alert/infrastructure/alert.entity';
         username: configService.get<string>('DB_USER', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'postgres'),
         database: configService.get<string>('DB_NAME', 'lorawan_db'),
-        entities: [User, SensorReadingEntity, AlertEntity],
+        entities: [User, SensorReadingEntity, AlertEntity, DeviceEntity],
         synchronize: false,
       }),
       inject: [ConfigService],

@@ -14,6 +14,8 @@ import { ConfigService } from '@nestjs/config';
 
 import { HealthModule } from './health/health.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
     PrometheusModule.register({
       path: '/metrics',
     }),
+    ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
   ],
   controllers: [],
   providers: [],

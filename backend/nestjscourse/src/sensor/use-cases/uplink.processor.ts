@@ -13,6 +13,7 @@ import { TriggerAlertUseCase } from '../../alert/use-cases/trigger-alert.use-cas
 import { RedisService } from '../infrastructure/redis.service';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Processor('uplink', { concurrency: 20 })
 export class UplinkProcessor extends WorkerHost {
@@ -32,6 +33,7 @@ export class UplinkProcessor extends WorkerHost {
     private readonly processedCounter: Counter<string>,
     @InjectMetric('uplink_processing_duration_seconds')
     private readonly processingDuration: Histogram<string>,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     super();
   }
@@ -96,6 +98,8 @@ export class UplinkProcessor extends WorkerHost {
       if (reading.isFireAlarm()) {
         await this.triggerAlert.execute(reading);
       }
+
+      this.eventEmitter.emit('device.seen', { devEui });
 
       this.logger.log(`Worker processed ${devEui} [fCnt=${fCnt}]`);
       this.processedCounter.labels('success').inc();
