@@ -18,6 +18,7 @@ import { InfluxTimeSeriesRepository } from './infrastructure/influx-time-series.
 import { BullModule } from '@nestjs/bullmq';
 import { UplinkProcessor } from './use-cases/uplink.processor';
 import { PriorityUplinkProcessor } from './use-cases/priority-uplink.processor';
+import { DecoderRegistry } from './domain/decoder.registry';
 import { InjectMetric, makeCounterProvider, makeHistogramProvider } from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram } from 'prom-client';
 
@@ -36,6 +37,7 @@ import { Counter, Histogram } from 'prom-client';
     InfluxService,
     UplinkProcessor,
     PriorityUplinkProcessor,
+    DecoderRegistry,
     {
       provide: SENSOR_READING_REPOSITORY,
       useClass: TypeOrmSensorReadingRepository,

@@ -8,7 +8,7 @@ import { SENSOR_CACHE_REPOSITORY } from '../domain/sensor-cache.repository';
 import type { ISensorCacheRepository } from '../domain/sensor-cache.repository';
 import { TIME_SERIES_REPOSITORY } from '../domain/time-series.repository';
 import type { ITimeSeriesRepository } from '../domain/time-series.repository';
-import { decodeUplinkPayload } from '../domain/sensor-payload.decoder';
+import { DecoderRegistry } from '../domain/decoder.registry';
 import { TriggerAlertUseCase } from '../../alert/use-cases/trigger-alert.use-case';
 import { RedisService } from '../infrastructure/redis.service';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
@@ -27,6 +27,7 @@ export class UplinkProcessor extends WorkerHost {
     private readonly timeSeriesRepo: ITimeSeriesRepository,
     private readonly triggerAlert: TriggerAlertUseCase,
     private readonly redisService: RedisService,
+    private readonly decoderRegistry: DecoderRegistry,
     @InjectMetric('uplink_processed_total')
     private readonly processedCounter: Counter<string>,
     @InjectMetric('uplink_processing_duration_seconds')
@@ -79,7 +80,7 @@ export class UplinkProcessor extends WorkerHost {
       }
 
       // 2. Decode va luu tru du lieu
-      const payload = decodeUplinkPayload(chirpstackData);
+      const payload = this.decoderRegistry.decode(chirpstackData);
       const reading = new SensorReading({
         devEui,
         ...payload,
